@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Facturación y cobranza por cliente</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Colores aproximados de Totalplay: ajústalos aquí */
+:root{--navy:#0B2565;--blue:#1F5BFF;--orange:#FF6B00;--teal:#0FA89A;--bg:#F2F5FA;--ink:#14213D;--mut:#5B6785;--line:#DDE3EF;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 "Segoe UI","Helvetica Neue",Arial,sans-serif}
+header{background:var(--navy);color:#fff;padding:18px 24px;border-bottom:4px solid var(--orange);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:22px;font-weight:700}
+.brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand img{height:36px;width:auto;display:block}
+.brand h1{padding-left:16px;border-left:1px solid rgba(255,255,255,.35)}
+.logo-txt{font-size:24px}
+#estado{font-size:13px}
+#estado.err{color:#FFC9A0}
+main{max-width:1280px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+input,select{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);min-width:130px}
+button{font:inherit;padding:8px 14px;border:0;border-radius:6px;background:var(--blue);color:#fff;font-weight:600;cursor:pointer}
+button.sec{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--orange);outline-offset:1px}
+.pills{display:flex;gap:6px}
+.pills button{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.pills button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+h2{margin:0 0 10px;font-size:16px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+thead th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;background:#fff}
+.big td{font-size:20px;font-weight:700}
+.big td:first-child{font-size:14px}
+.f{color:var(--blue)}.p{color:var(--teal)}.s{color:var(--orange)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid .card{margin:0}
+.wide{grid-column:1/-1}
+.box{position:relative;height:280px}
+.scroll{overflow:auto;max-height:420px}
+.det td:nth-child(-n+4),.det th:nth-child(-n+4),.det td:nth-last-child(-n+3),.det th:nth-last-child(-n+3){text-align:left}
+.det td{font-size:13px}
+.det thead th{font-size:11px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.big td{font-size:16px}}
+</style></head><body>
+<header><div class="brand"><img src="https://www.totalplay.com.mx/assetsv2/img/header/totalplay-logoWhite.svg" alt="Totalplay" onerror="this.replaceWith(Object.assign(document.createElement('strong'),{textContent:'Totalplay',className:'logo-txt'}))"><h1>Facturación y cobranza por cliente</h1></div><div id="estado">Sin conexión</div></header>
+<main>
+<section class="card"><div class="row">
+<label style="flex:1;min-width:280px">URL de la aplicación web de Apps Script (termina en /exec)
+<input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec"></label>
+<label>Actualizar cada<select id="int"><option value="0">Solo manual</option><option value="1">1 minuto</option><option value="5">5 minutos</option><option value="15">15 minutos</option><option value="30">30 minutos</option></select></label>
+<button id="upd">Actualizar</button></div></section>
+
+<section class="card"><div class="row">
+<label>Moneda<div class="pills" id="mon"></div></label>
+<label>Cliente<input id="cli" list="clis" placeholder="Todos los clientes"><datalist id="clis"></datalist></label>
+<label>UDN<select id="UDN"></select></label>
+<label>Status cartera<select id="Status_Cartera"></select></label>
+<label>Comercial/Ejecutivo CN<select id="NCEC"></select></label>
+<label>Año<select id="y"></select></label>
+<label>Mes<select id="m"></select></label>
+<button class="sec" id="lim">Limpiar filtros</button></div></section>
+
+<section class="card"><h2 id="tit">Resumen</h2>
+<table><thead><tr><th>Periodo</th><th>Facturado</th><th>Pagado</th><th>Saldo por pagar</th><th>% pagado</th></tr></thead><tbody id="kpi" class="big"></tbody></table></section>
+
+<div class="grid">
+<div class="card wide"><h2 id="t1"></h2><div class="box"><canvas id="c1"></canvas></div></div>
+<div class="card"><h2>Por año</h2><div class="box"><canvas id="c2"></canvas></div></div>
+<div class="card"><h2 id="t3"></h2><div class="box"><canvas id="c3"></canvas></div></div>
+</div>
+
+<section class="card" style="margin-top:14px"><h2 id="t4"></h2><div class="scroll"><table class="det">
+<thead><tr><th>Factura</th><th>Fecha</th><th>Cliente</th><th>UDN</th><th>Facturado</th><th>Pagado</th><th>Saldo</th><th>Cartera</th><th>Reloj cobranza</th><th>Bucket reloj</th></tr></thead><tbody id="tb"></tbody></table></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id),
+MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],
+COL={f:'#1F5BFF',p:'#0FA89A',s:'#FF6B00'},NM={f:'Facturado',p:'Pagado',s:'Saldo por pagar'};
+let RAW=[],F={mon:'',cli:'',UDN:'',Status_Cartera:'',NCEC:'',y:0,m:undefined},timer,CH={};
+const ls={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{if(typeof v==='number')return v;const n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n};
+const fecha=v=>{const s=String(v||'').trim();let x=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(x)return{y:+x[1],m:+x[2],d:+x[3]};x=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);return x?{y:+x[3],m:+x[2],d:+x[1]}:{y:0,m:0,d:0}};
+const money=n=>{try{return new Intl.NumberFormat('es-MX',{style:'currency',currency:F.mon,minimumFractionDigits:2,maximumFractionDigits:2}).format(n)}catch(e){return n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}};
+const short=n=>new Intl.NumberFormat('es-MX',{notation:'compact',maximumFractionDigits:1}).format(n);
+const sum=a=>a.reduce((t,o)=>(t.f+=o.fac,t.p+=o.pag,t.s+=o.sal,t),{f:0,p:0,s:0});
+const uniq=k=>[...new Set(RAW.map(o=>o[k]).filter(v=>v!==''&&v!=null))].sort();
+const st=(t,e)=>{const s=$('estado');s.textContent=t;s.className=e?'err':''};
+
+function load(j){
+ const c=j.columnas;
+ RAW=j.filas.map(r=>{const o={};c.forEach((k,i)=>o[k]=r[i]);
+  const cons=fecha(o.Mes_consumo),fac=fecha(o.fecha_de_factura); // periodo = mes de consumo; fecha de factura solo se muestra en la tabla
+  Object.assign(o,{y:cons.y,m:cons.m,d:cons.d,fd:fac.d,fm:fac.m,fy:fac.y,fac:num(o.Total),pag:num(o.PAGO_NETO),sal:num(o['Saldo X Cobrar']),mon:String(o.Moneda||'').trim().toUpperCase()||'N/D',cli:String(o.CLIENTE||'').trim(),NCEC:String(o['Nombre Comercial/Ejecutivo CN']||'').trim()});
+  ['UDN','Status_Cartera'].forEach(k=>o[k]=String(o[k]||'').trim());return o}).filter(o=>o.y);
+}
+
+/* ig: 'y' = ignora año y mes · 'm' = ignora solo el mes · sin valor = año y mes */
+function sel(ig){
+ const q=F.cli.toLowerCase();
+ return RAW.filter(o=>o.mon===F.mon&&(!q||o.cli.toLowerCase().includes(q))&&(!F.UDN||o.UDN===F.UDN)&&(!F.Status_Cartera||o.Status_Cartera===F.Status_Cartera)&&(!F.NCEC||o.NCEC===F.NCEC)&&(ig==='y'||o.y===F.y)&&(ig||!F.m||o.m===F.m));
+}
+
+function build(){
+ const cnt={};RAW.forEach(o=>cnt[o.mon]=(cnt[o.mon]||0)+1);
+ const mons=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
+ if(!mons.includes(F.mon))F.mon=mons[0]||'';
+ $('mon').innerHTML=mons.map(m=>`<button class="${m===F.mon?'on':''}" data-m="${esc(m)}">${esc(m)}</button>`).join('');
+ const ys=[...new Set(RAW.map(o=>o.y))].sort((a,b)=>b-a);
+ if(!ys.includes(F.y))F.y=ys[0]||0;
+ if(F.m===undefined)F.m=RAW.reduce((a,o)=>o.y===F.y&&o.mon===F.mon&&o.m>a?o.m:a,0);
+ const op=(id,vals,cur,all)=>{$(id).innerHTML=(all?`<option value="">${all}</option>`:'')+vals.map(v=>`<option value="${esc(v)}"${String(v)===String(cur)?' selected':''}>${esc(v)}</option>`).join('')};
+ op('UDN',uniq('UDN'),F.UDN,'Todas');op('Status_Cartera',uniq('Status_Cartera'),F.Status_Cartera,'Todos');op('NCEC',uniq('NCEC'),F.NCEC,'Todos');op('y',ys,F.y);
+ ['UDN','Status_Cartera','NCEC'].forEach(k=>F[k]=$(k).value);
+ $('m').innerHTML='<option value="0">Todos</option>'+MES.map((n,i)=>`<option value="${i+1}"${F.m===i+1?' selected':''}>${n}</option>`).join('');
+ $('clis').innerHTML=uniq('cli').map(c=>`<option value="${esc(c)}">`).join('');
+ render();
+}
+
+function draw(id,labels,T,horiz,only){
+ if(CH[id])CH[id].destroy();
+ const keys=only?[only]:['f','p','s'],ax=horiz?'x':'y';
+ CH[id]=new Chart($(id),{type:'bar',
+  data:{labels,datasets:keys.map(k=>({label:NM[k],data:T.map(t=>t[k]),backgroundColor:COL[k],borderRadius:3}))},
+  options:{indexAxis:horiz?'y':'x',responsive:true,maintainAspectRatio:false,
+   plugins:{legend:{display:!only},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${money(c.parsed[ax])}`}}},
+   scales:{[ax]:{ticks:{callback:short}}}}});
+}
+
+function render(){
+ const per=F.m?`${MES[F.m-1]} ${F.y}`:'';
+ $('tit').textContent=`Resumen · ${F.cli||'Todos los clientes'} · ${F.mon}`;
+ const R=[['Total histórico',sel('y')],['Año '+F.y,sel('m')],[per||'Mes: elige un mes',F.m?sel():[]]];
+ $('kpi').innerHTML=R.map(([n,a])=>{const t=sum(a);return `<tr><td>${n}</td><td class="f">${money(t.f)}</td><td class="p">${money(t.p)}</td><td class="s">${money(t.s)}</td><td>${t.f?(t.p/t.f*100).toFixed(1)+'%':'—'}</td></tr>`}).join('');
+
+ const L=sel().sort((a,b)=>b.sal-a.sal);
+ $('t4').textContent=`Facturas de ${per||'año '+F.y} (${L.length}${L.length>100?'; se muestran las 100 con mayor saldo':''})`;
+ $('tb').innerHTML=L.slice(0,100).map(o=>`<tr><td>${esc(o.no_factura)}</td><td>${o.fd}/${o.fm}/${o.fy}</td><td>${esc(o.cli)}</td><td>${esc(o.UDN)}</td><td>${money(o.fac)}</td><td>${money(o.pag)}</td><td>${money(o.sal)}</td><td>${esc(o.Status_Cartera)}</td><td>${esc(o.RELOJ_COBRANZA_SISTEMA)}</td><td>${esc(o.Bucket_reloj)}</td></tr>`).join('')||'<tr><td colspan="10">No hay facturas con estos filtros.</td></tr>';
+
+ if(typeof Chart==='undefined'){$('t1').textContent='No se pudo cargar la librería de gráficas (revisa tu conexión a internet).';return}
+ const M=Array.from({length:12},()=>({f:0,p:0,s:0}));
+ sel('m').forEach(o=>{const t=M[o.m-1];t.f+=o.fac;t.p+=o.pag;t.s+=o.sal});
+ $('t1').textContent='Por mes · '+F.y;draw('c1',MES.map(n=>n.slice(0,3)),M);
+
+ const Y={};sel('y').forEach(o=>{const t=Y[o.y]||(Y[o.y]={f:0,p:0,s:0});t.f+=o.fac;t.p+=o.pag;t.s+=o.sal});
+ const yk=Object.keys(Y).sort();draw('c2',yk,yk.map(k=>Y[k]));
+
+ const C={};L.forEach(o=>{const t=C[o.cli]||(C[o.cli]={f:0,p:0,s:0});t.f+=o.fac;t.p+=o.pag;t.s+=o.sal});
+ const top=Object.entries(C).sort((a,b)=>b[1].s-a[1].s).slice(0,10);
+ $('t3').textContent='Top 10 clientes por saldo · '+(per||'año '+F.y);
+ draw('c3',top.map(e=>e[0].slice(0,28)),top.map(e=>e[1]),true,'s');
+}
+
+async function cargar(){
+ const u=$('url').value.trim();
+ if(!u){st('Pega la URL de Apps Script (termina en /exec) y pulsa Actualizar.',1);return}
+ ls.s('url',u);st('Actualizando…');
+ try{
+  const r=await fetch(u,{cache:'no-store'}),j=await r.json();
+  if(!j.ok)throw new Error(j.error||'Respuesta no válida');
+  load(j);
+  Object.assign(F,{mon:'',cli:'',UDN:'',Status_Cartera:'',NCEC:'',y:0,m:0});
+  $('cli').value='';
+  build();
+  st(`Actualizado ${new Date().toLocaleTimeString('es-MX')} · ${RAW.length} facturas`);
+ }catch(e){st(`No se pudo actualizar: ${e.message}. Revisa que la URL termine en /exec y que el acceso sea "Cualquier persona".`,1)}
+}
+function prog(){clearInterval(timer);const n=+$('int').value;ls.s('int',n);if(n)timer=setInterval(cargar,n*6e4)}
+
+$('mon').onclick=e=>{if(e.target.dataset.m){F.mon=e.target.dataset.m;build()}};
+['UDN','Status_Cartera','NCEC'].forEach(k=>$(k).onchange=e=>{F[k]=e.target.value;render()});
+$('cli').oninput=e=>{F.cli=e.target.value.trim();render()};
+$('y').onchange=e=>{F.y=+e.target.value;render()};
+$('m').onchange=e=>{F.m=+e.target.value;render()};
+$('lim').onclick=()=>{Object.assign(F,{cli:'',UDN:'',Status_Cartera:'',NCEC:'',m:0});$('cli').value='';build()};
+$('upd').onclick=cargar;
+$('url').onkeydown=e=>{if(e.key==='Enter')cargar()};
+$('int').onchange=prog;
+$('url').value=ls.g('url')||'';
+if(['0','1','5','15','30'].includes(ls.g('int')))$('int').value=ls.g('int');
+prog();if($('url').value)cargar();
+</script></body></html>
