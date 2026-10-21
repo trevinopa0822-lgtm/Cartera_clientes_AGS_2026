@@ -15,6 +15,7 @@ h1{margin:0;font-size:22px;font-weight:700}
 .logo-txt{font-size:24px}
 #estado{font-size:13px}
 #estado.err{color:#FFC9A0}
+#aviso{display:none;background:#FFF4E5;border:1px solid #FFC98B;color:#7A4A00;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px}
 main{max-width:1280px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
@@ -46,6 +47,7 @@ thead th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;b
 </style></head><body>
 <header><div class="brand"><img src="https://www.totalplay.com.mx/assetsv2/img/header/totalplay-logoWhite.svg" alt="Totalplay" onerror="this.replaceWith(Object.assign(document.createElement('strong'),{textContent:'Totalplay',className:'logo-txt'}))"><h1>Facturación y cobranza por cliente</h1></div><div id="estado">Sin conexión</div></header>
 <main>
+<div id="aviso"></div>
 <section class="card"><div class="row">
 <label style="flex:1;min-width:280px">URL de la aplicación web de Apps Script (termina en /exec)
 <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec"></label>
@@ -89,12 +91,18 @@ const sum=a=>a.reduce((t,o)=>(t.f+=o.fac,t.p+=o.pag,t.s+=o.sal,t),{f:0,p:0,s:0})
 const uniq=k=>[...new Set(RAW.map(o=>o[k]).filter(v=>v!==''&&v!=null))].sort();
 const st=(t,e)=>{const s=$('estado');s.textContent=t;s.className=e?'err':''};
 
+let BAD=[];
 function load(j){
  const c=j.columnas;
+ const bad=[];
  RAW=j.filas.map(r=>{const o={};c.forEach((k,i)=>o[k]=r[i]);
-  const cons=fecha(o.Mes_consumo),fac=fecha(o.fecha_de_factura); // periodo = mes de consumo; fecha de factura solo se muestra en la tabla
-  Object.assign(o,{y:cons.y,m:cons.m,d:cons.d,fd:fac.d,fm:fac.m,fy:fac.y,fac:num(o.Total),pag:num(o.PAGO_NETO),sal:num(o['Saldo X Cobrar']),mon:String(o.Moneda||'').trim().toUpperCase()||'N/D',cli:String(o.CLIENTE||'').trim(),NCEC:String(o['Nombre Comercial/Ejecutivo CN']||'').trim()});
+  const cons=fecha(o.Mes_consumo),reg=fecha(o.Mes_Registro),fac=fecha(o.fecha_de_factura);
+  const per=cons.y?cons:(reg.y?reg:fac); // si falta Mes_consumo, usa Mes_Registro; si tampoco, fecha_de_factura
+  const totalRaw=String(o.Total==null?'':o.Total).trim(),totalNum=num(o.Total);
+  if(totalRaw!==''&&totalNum===0&&!/^\(?-?0*(\.0+)?\)?$/.test(totalRaw.replace(/,/g,''))) bad.push(String(o.no_factura||'(sin folio)').trim());
+  Object.assign(o,{y:per.y,m:per.m,d:per.d,fd:fac.d,fm:fac.m,fy:fac.y,fac:totalNum,pag:num(o.PAGO_NETO),sal:num(o['Saldo X Cobrar']),mon:String(o.Moneda||'').trim().toUpperCase()||'N/D',cli:String(o.CLIENTE||'').trim(),NCEC:String(o['Nombre Comercial/Ejecutivo CN']||'').trim()});
   ['UDN','Status_Cartera'].forEach(k=>o[k]=String(o[k]||'').trim());return o}).filter(o=>o.y);
+ BAD=bad;
 }
 
 /* ig: 'y' = ignora año y mes · 'm' = ignora solo el mes · sin valor = año y mes */
@@ -165,6 +173,9 @@ async function cargar(){
   $('cli').value='';
   build();
   st(`Actualizado ${new Date().toLocaleTimeString('es-MX')} · ${RAW.length} facturas`);
+  const av=$('aviso');
+  if(BAD.length){av.style.display='block';av.textContent=`⚠ ${BAD.length} factura(s) con el campo "Total" no numérico en el Google Sheet (se cuentan como $0 mientras no se corrijan ahí): ${BAD.slice(0,10).join(', ')}${BAD.length>10?'…':''}`;}
+  else av.style.display='none';
  }catch(e){st(`No se pudo actualizar: ${e.message}. Revisa que la URL termine en /exec y que el acceso sea "Cualquier persona".`,1)}
 }
 function prog(){clearInterval(timer);const n=+$('int').value;ls.s('int',n);if(n)timer=setInterval(cargar,n*6e4)}
