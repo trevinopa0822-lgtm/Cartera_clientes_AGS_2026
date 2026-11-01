@@ -34,13 +34,13 @@ th:first-child,td:first-child{text-align:left}
 thead th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;background:#fff}
 .big td{font-size:20px;font-weight:700}
 .big td:first-child{font-size:14px}
-.f{color:var(--blue)}.p{color:var(--teal)}.s{color:var(--orange)}
+.f{color:var(--blue)}.p{color:var(--teal)}.s{color:var(--orange)}.a{color:var(--navy)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid .card{margin:0}
 .wide{grid-column:1/-1}
 .box{position:relative;height:280px}
 .scroll{overflow:auto;max-height:420px}
-.det td:nth-child(-n+4),.det th:nth-child(-n+4),.det td:nth-last-child(-n+3),.det th:nth-last-child(-n+3){text-align:left}
+.det td:nth-child(-n+5),.det th:nth-child(-n+5),.det td:nth-last-child(-n+3),.det th:nth-last-child(-n+3){text-align:left}
 .det td{font-size:13px}
 .det thead th{font-size:11px}
 @media(max-width:800px){.grid{grid-template-columns:1fr}.big td{font-size:16px}}
@@ -65,7 +65,7 @@ thead th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;b
 <button class="sec" id="lim">Limpiar filtros</button></div></section>
 
 <section class="card"><h2 id="tit">Resumen</h2>
-<table><thead><tr><th>Periodo</th><th>Facturado</th><th>Pagado</th><th>Saldo por pagar</th><th>% pagado</th></tr></thead><tbody id="kpi" class="big"></tbody></table></section>
+<table><thead><tr><th>Periodo</th><th>Facturado</th><th>Ajustes otros</th><th>Pagado</th><th>Saldo por pagar</th><th>% pagado</th></tr></thead><tbody id="kpi" class="big"></tbody></table></section>
 
 <div class="grid">
 <div class="card wide"><h2 id="t1"></h2><div class="box"><canvas id="c1"></canvas></div></div>
@@ -74,7 +74,7 @@ thead th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;b
 </div>
 
 <section class="card" style="margin-top:14px"><h2 id="t4"></h2><div class="scroll"><table class="det">
-<thead><tr><th>Factura</th><th>Fecha</th><th>Cliente</th><th>UDN</th><th>Facturado</th><th>Pagado</th><th>Saldo</th><th>Cartera</th><th>Reloj cobranza</th><th>Bucket reloj</th></tr></thead><tbody id="tb"></tbody></table></div></section>
+<thead><tr><th>Factura</th><th>Fecha</th><th>Cliente</th><th>account_no</th><th>UDN</th><th>Facturado</th><th>Pagado</th><th>Saldo</th><th>Cartera</th><th>Reloj cobranza</th><th>Bucket reloj</th></tr></thead><tbody id="tb"></tbody></table></div></section>
 </main>
 <script>
 const $=id=>document.getElementById(id),
@@ -87,7 +87,7 @@ const num=v=>{if(typeof v==='number')return v;const n=parseFloat(String(v==null?
 const fecha=v=>{const s=String(v||'').trim();let x=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(x)return{y:+x[1],m:+x[2],d:+x[3]};x=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);return x?{y:+x[3],m:+x[2],d:+x[1]}:{y:0,m:0,d:0}};
 const money=n=>{try{return new Intl.NumberFormat('es-MX',{style:'currency',currency:F.mon,minimumFractionDigits:2,maximumFractionDigits:2}).format(n)}catch(e){return n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}};
 const short=n=>new Intl.NumberFormat('es-MX',{notation:'compact',maximumFractionDigits:1}).format(n);
-const sum=a=>a.reduce((t,o)=>(t.f+=o.fac,t.p+=o.pag,t.s+=o.sal,t),{f:0,p:0,s:0});
+const sum=a=>a.reduce((t,o)=>(t.f+=o.fac,t.p+=o.pag,t.s+=o.sal,t.a+=o.aot,t),{f:0,p:0,s:0,a:0});
 const uniq=k=>[...new Set(RAW.map(o=>o[k]).filter(v=>v!==''&&v!=null))].sort();
 const st=(t,e)=>{const s=$('estado');s.textContent=t;s.className=e?'err':''};
 
@@ -100,7 +100,7 @@ function load(j){
   const per=cons.y?cons:(reg.y?reg:fac); // si falta Mes_consumo, usa Mes_Registro; si tampoco, fecha_de_factura
   const totalRaw=String(o.Total==null?'':o.Total).trim(),totalNum=num(o.Total);
   if(totalRaw!==''&&totalNum===0&&!/^\(?-?0*(\.0+)?\)?$/.test(totalRaw.replace(/,/g,''))) bad.push(String(o.no_factura||'(sin folio)').trim());
-  Object.assign(o,{y:per.y,m:per.m,d:per.d,fd:fac.d,fm:fac.m,fy:fac.y,fac:totalNum,pag:num(o.PAGO_NETO),sal:num(o['Saldo X Cobrar']),mon:String(o.Moneda||'').trim().toUpperCase()||'N/D',cli:String(o.CLIENTE||'').trim(),NCEC:String(o['Nombre Comercial/Ejecutivo CN']||'').trim()});
+  Object.assign(o,{y:per.y,m:per.m,d:per.d,fd:fac.d,fm:fac.m,fy:fac.y,fac:totalNum,aot:num(o.AJUSTES_OTROS),pag:num(o.PAGO_NETO),sal:num(o['Saldo X Cobrar']),mon:String(o.Moneda||'').trim().toUpperCase()||'N/D',cli:String(o.CLIENTE||'').trim(),NCEC:String(o['Nombre Comercial/Ejecutivo CN']||'').trim()});
   ['UDN','Status_Cartera'].forEach(k=>o[k]=String(o[k]||'').trim());return o}).filter(o=>o.y);
  BAD=bad;
 }
@@ -141,11 +141,11 @@ function render(){
  const per=F.m?`${MES[F.m-1]} ${F.y}`:'';
  $('tit').textContent=`Resumen · ${F.cli||'Todos los clientes'} · ${F.mon}`;
  const R=[['Total histórico',sel('y')],['Año '+F.y,sel('m')],[per||'Mes: elige un mes',F.m?sel():[]]];
- $('kpi').innerHTML=R.map(([n,a])=>{const t=sum(a);return `<tr><td>${n}</td><td class="f">${money(t.f)}</td><td class="p">${money(t.p)}</td><td class="s">${money(t.s)}</td><td>${t.f?(t.p/t.f*100).toFixed(1)+'%':'—'}</td></tr>`}).join('');
+ $('kpi').innerHTML=R.map(([n,a])=>{const t=sum(a);return `<tr><td>${n}</td><td class="f">${money(t.f)}</td><td class="a">${money(Math.abs(t.a))}</td><td class="p">${money(t.p)}</td><td class="s">${money(t.s)}</td><td>${t.f?(t.p/t.f*100).toFixed(1)+'%':'—'}</td></tr>`}).join('');
 
  const L=sel().sort((a,b)=>b.sal-a.sal);
  $('t4').textContent=`Facturas de ${per||'año '+F.y} (${L.length}${L.length>100?'; se muestran las 100 con mayor saldo':''})`;
- $('tb').innerHTML=L.slice(0,100).map(o=>`<tr><td>${esc(o.no_factura)}</td><td>${o.fd}/${o.fm}/${o.fy}</td><td>${esc(o.cli)}</td><td>${esc(o.UDN)}</td><td>${money(o.fac)}</td><td>${money(o.pag)}</td><td>${money(o.sal)}</td><td>${esc(o.Status_Cartera)}</td><td>${esc(o.RELOJ_COBRANZA_SISTEMA)}</td><td>${esc(o.Bucket_reloj)}</td></tr>`).join('')||'<tr><td colspan="10">No hay facturas con estos filtros.</td></tr>';
+ $('tb').innerHTML=L.slice(0,100).map(o=>`<tr><td>${esc(o.no_factura)}</td><td>${o.fd}/${o.fm}/${o.fy}</td><td>${esc(o.cli)}</td><td>${esc(o.account_no)}</td><td>${esc(o.UDN)}</td><td>${money(o.fac)}</td><td>${money(o.pag)}</td><td>${money(o.sal)}</td><td>${esc(o.Status_Cartera)}</td><td>${esc(o.RELOJ_COBRANZA_SISTEMA)}</td><td>${esc(o.Bucket_reloj)}</td></tr>`).join('')||'<tr><td colspan="11">No hay facturas con estos filtros.</td></tr>';
 
  if(typeof Chart==='undefined'){$('t1').textContent='No se pudo cargar la librería de gráficas (revisa tu conexión a internet).';return}
  const M=Array.from({length:12},()=>({f:0,p:0,s:0}));
