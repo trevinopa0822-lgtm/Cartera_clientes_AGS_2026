@@ -43,18 +43,65 @@ thead th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;b
 .det td:nth-child(-n+5),.det th:nth-child(-n+5),.det td:nth-last-child(-n+3),.det th:nth-last-child(-n+3){text-align:left}
 .det td{font-size:13px}
 .det thead th{font-size:11px}
-@media(max-width:800px){.grid{grid-template-columns:1fr}.big td{font-size:16px}}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom)}
+.sx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sx table{min-width:640px}
+.scroll{-webkit-overflow-scrolling:touch}
+.det{min-width:980px}
+.det td,.det th{white-space:nowrap}
+.det td:nth-child(3){white-space:normal;min-width:180px}
+@media(max-width:1000px){
+ main{padding:12px}
+ .filt{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+ .filt select,.filt input{width:100%;min-width:0}
+ .filt button.sec{width:100%}
+}
+@media(max-width:800px){
+ .grid{grid-template-columns:1fr}
+ .big td{font-size:16px}
+ header{padding:12px 14px;gap:8px}
+ h1{font-size:18px}
+ .brand{gap:10px}
+ .brand img{height:28px}
+ .brand h1{padding-left:10px}
+ .card{padding:12px}
+ .box{height:240px}
+ .pills{flex-wrap:wrap}
+}
+@media(max-width:480px){
+ .filt{grid-template-columns:1fr 1fr}
+ h1{font-size:16px}
+ .big td{font-size:15px}
+ #estado{font-size:12px;width:100%}
+ .row>button#upd{width:100%}
+ .row>label{width:100%}
+ .filt>label{width:auto}
+}
+/* teléfono en horizontal: poca altura */
+@media(max-height:500px) and (orientation:landscape){
+ header{padding:8px 14px}
+ .brand img{height:24px}
+ h1{font-size:16px}
+ .box{height:200px}
+ .scroll{max-height:60vh}
+}
+/* pantallas táctiles: controles más grandes y 16px para que iOS no haga zoom al enfocar */
+@media(pointer:coarse){
+ input,select{font-size:16px;min-height:44px}
+ button{min-height:44px}
+}
 </style></head><body>
 <header><div class="brand"><img src="https://www.totalplay.com.mx/assetsv2/img/header/totalplay-logoWhite.svg" alt="Totalplay" onerror="this.replaceWith(Object.assign(document.createElement('strong'),{textContent:'Totalplay',className:'logo-txt'}))"><h1>Facturación y cobranza por cliente</h1></div><div id="estado">Sin conexión</div></header>
 <main>
 <div id="aviso"></div>
 <section class="card"><div class="row">
-<label style="flex:1;min-width:280px">URL de la aplicación web de Apps Script (termina en /exec)
+<label style="flex:1;min-width:min(280px,100%)">URL de la aplicación web de Apps Script (termina en /exec)
 <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec"></label>
 <label>Actualizar cada<select id="int"><option value="0">Solo manual</option><option value="1">1 minuto</option><option value="5">5 minutos</option><option value="15">15 minutos</option><option value="30">30 minutos</option></select></label>
 <button id="upd">Actualizar</button></div></section>
 
-<section class="card"><div class="row">
+<section class="card"><div class="row filt">
 <label>Moneda<div class="pills" id="mon"></div></label>
 <label>Cliente<input id="cli" list="clis" placeholder="Todos los clientes"><datalist id="clis"></datalist></label>
 <label>UDN<select id="UDN"></select></label>
@@ -65,7 +112,7 @@ thead th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;b
 <button class="sec" id="lim">Limpiar filtros</button></div></section>
 
 <section class="card"><h2 id="tit">Resumen</h2>
-<table><thead><tr><th>Periodo</th><th>Facturado</th><th>Ajustes DPP</th><th>Ajustes otros</th><th>Pagado</th><th>Saldo por pagar</th><th>% pagado</th></tr></thead><tbody id="kpi" class="big"></tbody></table></section>
+<div class="sx"><table><thead><tr><th>Periodo</th><th>Facturado</th><th>Ajustes DPP</th><th>Ajustes otros</th><th>Pagado</th><th>Saldo por pagar</th><th>% pagado</th></tr></thead><tbody id="kpi" class="big"></tbody></table></div></section>
 
 <div class="grid">
 <div class="card wide"><h2 id="t1"></h2><div class="box"><canvas id="c1"></canvas></div></div>
